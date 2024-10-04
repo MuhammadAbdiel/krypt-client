@@ -27,9 +27,22 @@ const Input: React.FC<{
 );
 
 const Welcome: React.FC = () => {
-  const { connectWallet, currentAccount } = useContext(TransactionContext);
+  const {
+    connectWallet,
+    currentAccount,
+    formData,
+    sendTransaction,
+    handleChange,
+  } = useContext(TransactionContext);
 
-  const handleSubmit = () => {};
+  const handleSubmit = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    e.preventDefault();
+    const { addressTo, amount, keyword, message } = formData;
+
+    if (!addressTo || !amount || !keyword || !message) return;
+
+    sendTransaction();
+  };
 
   return (
     <div className="flex w-full justify-center items-center">
@@ -89,25 +102,25 @@ const Welcome: React.FC = () => {
               placeholder="Address To"
               name="addressTo"
               type="text"
-              handleChange={() => {}}
+              handleChange={handleChange}
             />
             <Input
               placeholder="Amount (ETH)"
               name="amount"
               type="number"
-              handleChange={() => {}}
+              handleChange={handleChange}
             />
             <Input
               placeholder="Keyword (GIF)"
               name="keyword"
               type="text"
-              handleChange={() => {}}
+              handleChange={handleChange}
             />
             <Input
               placeholder="Enter Message"
               name="message"
               type="text"
-              handleChange={() => {}}
+              handleChange={handleChange}
             />
 
             <div className="h-[1px] w-full bg-gray-400 my-2" />
@@ -117,7 +130,7 @@ const Welcome: React.FC = () => {
             ) : (
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={(e) => handleSubmit(e)}
                 className="text-white w-full mt-2 border-[1px] p-2 border-[#3d4f7c] rounded-full cursor-pointer hover:bg-[#2546bd]"
               >
                 Send Now
