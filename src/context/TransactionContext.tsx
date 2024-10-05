@@ -3,7 +3,39 @@ import { createContext, useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { contractABI, contractAddress } from "../utils/constants";
 
-export const TransactionContext = createContext({
+interface Transaction {
+  addressTo: string;
+  addressFrom: string;
+  timestamp: string;
+  message: string;
+  keyword: string;
+  amount: number;
+}
+
+export const TransactionContext = createContext<{
+  currentAccount: string;
+  connectWallet: () => void;
+  formData: {
+    addressTo: string;
+    amount: string;
+    keyword: string;
+    message: string;
+  };
+  setFormData: (_formData: {
+    addressTo: string;
+    amount: string;
+    keyword: string;
+    message: string;
+  }) => void;
+  handleChange: (
+    _e: React.ChangeEvent<HTMLInputElement>,
+    _name: string
+  ) => void;
+  sendTransaction: () => void;
+  transactions: Transaction[];
+  isLoading: boolean;
+  transactionCount: number;
+}>({
   currentAccount: "",
   connectWallet: () => {},
   formData: {
@@ -20,6 +52,9 @@ export const TransactionContext = createContext({
   }) => {},
   handleChange: (_e: React.ChangeEvent<HTMLInputElement>, _name: string) => {},
   sendTransaction: () => {},
+  transactions: [],
+  isLoading: false,
+  transactionCount: 0,
 });
 
 const { ethereum } = window as any;
@@ -55,12 +90,42 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({
   const [transactionCount, setTransactionCount] = useState<number>(
     parseInt(localStorage.getItem("transactionCount") || "0")
   );
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     name: string
   ) => {
     setFormData((prevState) => ({ ...prevState, [name]: e.target.value }));
+  };
+
+  const getAllTransactions = async () => {
+    try {
+      if (!ethereum) return alert("Please install metamask");
+      const transactionContract = getEthereumContract();
+      const availableTransactions =
+        await transactionContract.getAllTransactions();
+
+      const structuredTransactions = availableTransactions.map(
+        (transaction: any) => ({
+          addressTo: transaction.receiver,
+          addressFrom: transaction.sender,
+          timestamp: new Date(
+            transaction.timestamp.toNumber() * 1000
+          ).toLocaleString(),
+          message: transaction.message,
+          keyword: transaction.keyword,
+          amount: ethers.utils.formatEther(transaction.amount),
+          // amount: parseInt(transaction.amount._hex) / 10 ** 18,
+        })
+      );
+
+      console.log(structuredTransactions);
+
+      setTransactions(structuredTransactions);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const checkIfWalletIsConnected = async () => {
@@ -71,11 +136,29 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (accounts.length) {
         setCurrentAccount(accounts[0]);
+
+        getAllTransactions();
       } else {
         console.log("No accounts found");
       }
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const checkIfTransactionsExists = async () => {
+    try {
+      if (ethereum) {
+        const transactionContract = getEthereumContract();
+        const transactionCount =
+          await transactionContract.getTransactionCount();
+
+        window.localStorage.setItem("transactionCount", transactionCount);
+      }
+    } catch (error) {
+      console.log(error);
+
+      throw new Error("No ethereum object");
     }
   };
 
@@ -134,7 +217,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setTransactionCount(transactionCount.toNumber());
 
-      localStorage.setItem("transactionCount", transactionCount.toNumber());
+      window.location.reload();
     } catch (error) {
       console.log(error);
 
@@ -144,6 +227,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     checkIfWalletIsConnected();
+    checkIfTransactionsExists();
   }, []);
 
   return (
@@ -155,6 +239,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({
         setFormData,
         handleChange,
         sendTransaction,
+        transactions,
+        isLoading,
+        transactionCount,
       }}
     >
       {children}

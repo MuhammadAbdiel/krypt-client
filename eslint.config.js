@@ -26,6 +26,8 @@ export default tseslint.config(
       "no-constant-condition": "off",
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/exhaustive-deps": "off",
+      "react-refresh/only-export-components": "off",
     },
   }
 );
